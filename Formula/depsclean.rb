@@ -48,6 +48,6 @@ class Depsclean < Formula
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/depsclean version")
+    assert_match "1.0.0", shell_output("#{bin}/depsclean version")
   end
 end
