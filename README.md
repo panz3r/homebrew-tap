@@ -2,7 +2,7 @@
 
 ## Included formulae
 
-No formulae published yet.
+- [`depsclean`](https://github.com/panz3r/depsclean): A fast, interactive CLI/TUI for discovering and removing dependency directories (`node_modules`, `.venv`, `vendor`, and more) to reclaim disk space.
 
 ## How do I install these formulae?
 
