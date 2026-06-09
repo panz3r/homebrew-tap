@@ -3,6 +3,7 @@
 ## Included formulae
 
 - [`depsclean`](https://github.com/panz3r/depsclean): A fast, interactive CLI/TUI for discovering and removing dependency directories (`node_modules`, `.venv`, `vendor`, and more) to reclaim disk space.
+- [`firefox-bookmarks`](https://github.com/panz3r/firefox-bookmarks): Convert Firefox bookmark backup files directly to HTML format.
 
 ## How do I install these formulae?
 
