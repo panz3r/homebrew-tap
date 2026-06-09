@@ -1,36 +1,19 @@
 class Depsclean < Formula
   desc "Fast, interactive CLI/TUI for discovering and removing dependency directories"
   homepage "https://github.com/panz3r/depsclean"
+  url "https://github.com/panz3r/depsclean/archive/refs/tags/v1.0.1.tar.gz"
+  sha256 "788f0567584043e185c772b6b5eb4352196fc0367db0bc1998f5d410b60dc4ff"
   license "MPL-2.0"
+  head "https://github.com/panz3r/depsclean.git", branch: "main"
 
-  on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/panz3r/depsclean/releases/download/v1.0.0/depsclean_macos_arm64"
-      sha256 "80711bde5671fbab059d169760161c8c4b4ee27421768d31dba1c091e0ef3207"
-    else
-      url "https://github.com/panz3r/depsclean/releases/download/v1.0.0/depsclean_macos_intel"
-      sha256 "18834142c66ff1924d63e887a28aaab7ff29a1f54f87b7ee158b31e88e09047f"
-    end
-  end
+  depends_on "go" => :build
 
-  on_linux do
-    if Hardware::CPU.arm?
-      url "https://github.com/panz3r/depsclean/releases/download/v1.0.0/depsclean_linux_arm64"
-      sha256 "bf3d2fbe230a00ba7e3dbeec160efa0d4ba27c38735e72c51f7e6757c5003cb2"
-    else
-      url "https://github.com/panz3r/depsclean/releases/download/v1.0.0/depsclean_linux_amd64"
-      sha256 "cdc5100da32e4c994e356ff5a579245b754eb8ac51a3621fac959b51d4d482b5"
-    end
-  end
+  deny_network_access! [:postinstall]
 
   def install
-    binary_name = if OS.mac?
-      Hardware::CPU.arm? ? "depsclean_macos_arm64" : "depsclean_macos_intel"
-    else
-      Hardware::CPU.arm? ? "depsclean_linux_arm64" : "depsclean_linux_amd64"
-    end
+    system "go", "build", *std_go_args(ldflags: "-s -w -X github.com/panz3r/depsclean/internal/update.Version=#{version}"), "./cmd/depsclean"
 
-    bin.install binary_name => "depsclean"
+    generate_completions_from_executable(bin/"depsclean", "completion", shell_parameter_format: :cobra)
   end
 
   def caveats
@@ -48,6 +31,6 @@ class Depsclean < Formula
   end
 
   test do
-    assert_match "1.0.0", shell_output("#{bin}/depsclean version")
+    assert_match version.to_s, shell_output("#{bin}/depsclean version")
   end
 end
