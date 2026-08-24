@@ -1,8 +1,8 @@
 class FirefoxBookmarks < Formula
   desc "Convert Firefox bookmark backup files directly to HTML format"
   homepage "https://github.com/panz3r/firefox-bookmarks"
-  url "https://github.com/panz3r/firefox-bookmarks/archive/refs/tags/v1.0.2.tar.gz"
-  sha256 "f56a20160366cf1678ebcc8193ecc3d7a0d6c226db9afeffa2141b2b55c5690d"
+  url "https://github.com/panz3r/firefox-bookmarks/archive/refs/tags/v1.0.3.tar.gz"
+  sha256 "b17e9820af04de75e05e51aba6e0f92135e1dbb35715b479857da90f30e8c206"
   license "MIT"
   head "https://github.com/panz3r/firefox-bookmarks.git", branch: "main"
 
