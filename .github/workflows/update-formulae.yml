@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -108,10 +109,12 @@ jobs:
           git switch -c "$branch"
           git add "Formula/$FORMULA.rb"
           git commit -m "feat: update version of \`$FORMULA\` tool"
-          git push --set-upstream origin "$branch"
+          git push --force-with-lease --set-upstream origin "$branch"
 
           gh pr create \
             --base main \
             --head "$branch" \
             --title "feat: update version of \`$FORMULA\` tool" \
             --body "Update \`$FORMULA\` to [$TAG]($URL). The source archive checksum was calculated by the workflow."
+
+          gh workflow run tests.yml --ref "$branch"
