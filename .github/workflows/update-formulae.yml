@@ -103,6 +103,11 @@ jobs:
           if [[ -n "$existing_pr" ]]; then
             git fetch origin "$branch"
             if git diff --quiet "origin/$branch" -- "Formula/$FORMULA.rb"; then
+              head_sha="$(git rev-parse "origin/$branch")"
+              tests_dispatched="$(gh run list --workflow tests.yml --branch "$branch" --event workflow_dispatch --limit 20 --json headSha --jq "[.[] | select(.headSha == \"$head_sha\")] | length > 0")"
+              if [[ "$tests_dispatched" != "true" ]]; then
+                gh workflow run tests.yml --ref "$branch"
+              fi
               echo "The existing update PR already contains $TAG"
               exit 0
             fi
