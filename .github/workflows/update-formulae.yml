@@ -102,6 +102,10 @@ jobs:
           existing_pr="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
           if [[ -n "$existing_pr" ]]; then
             git fetch origin "$branch"
+            if git diff --quiet "origin/$branch" -- "Formula/$FORMULA.rb"; then
+              echo "The existing update PR already contains $TAG"
+              exit 0
+            fi
           fi
 
           git config user.name "github-actions[bot]"
