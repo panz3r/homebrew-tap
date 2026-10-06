@@ -1,0 +1,117 @@
+name: Update formulae
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-formulae
+
+jobs:
+  update:
+    name: Update ${{ matrix.formula }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - formula: depsclean
+            repository: panz3r/depsclean
+          - formula: firefox-bookmarks
+            repository: panz3r/firefox-bookmarks
+
+    steps:
+      - name: Check out tap
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Find latest release
+        id: release
+        env:
+          GH_REPO: ${{ matrix.repository }}
+          FORMULA: ${{ matrix.formula }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          release="$(gh release view --json tagName,isDraft,isPrerelease)"
+          tag="$(jq -r '.tagName' <<<"$release")"
+          if [[ "$(jq -r '.isDraft' <<<"$release")" == "true" || "$(jq -r '.isPrerelease' <<<"$release")" == "true" ]]; then
+            echo "Latest release is not stable; nothing to update"
+            exit 0
+          fi
+
+          current_url="$(sed -n 's|^[[:space:]]*url "\(.*\)"|\1|p' "Formula/$FORMULA.rb")"
+          expected_url="https://github.com/$GH_REPO/archive/refs/tags/$tag.tar.gz"
+          if [[ "$current_url" == "$expected_url" ]]; then
+            echo "Formula already points to $tag"
+            exit 0
+          fi
+
+          archive="$RUNNER_TEMP/$FORMULA-$tag.tar.gz"
+          curl --fail --location --silent --show-error "$expected_url" --output "$archive"
+          sha256="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+
+          {
+            echo "tag=$tag"
+            echo "url=$expected_url"
+            echo "sha256=$sha256"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update formula
+        if: steps.release.outputs.tag != ''
+        env:
+          FORMULA: ${{ matrix.formula }}
+          URL: ${{ steps.release.outputs.url }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # The Ruby expression intentionally uses Ruby interpolation, not shell interpolation.
+          # shellcheck disable=SC2016
+          ruby -0pi -e '
+            url = ENV.fetch("URL")
+            sha256 = ENV.fetch("SHA256")
+            content = $_
+            content.sub!(/(^\s*url ")[^"]+(")/, "\\1#{url}\\2")
+            content.sub!(/(^\s*sha256 ")[^"]+(")/, "\\1#{sha256}\\2")
+            abort "formula fields not found" unless content.include?(url) && content.include?(sha256)
+            $_ = content
+          ' "Formula/$FORMULA.rb"
+
+      - name: Open update pull request
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORMULA: ${{ matrix.formula }}
+          REPOSITORY: ${{ matrix.repository }}
+          TAG: ${{ steps.release.outputs.tag }}
+          URL: ${{ steps.release.outputs.url }}
+        run: |
+          set -euo pipefail
+
+          branch="automation/update-$FORMULA-${TAG#v}"
+          if gh pr list --head "$branch" --state open --json number --jq 'length > 0' | grep -qx true; then
+            echo "An update PR already exists for $FORMULA $TAG"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "Formula/$FORMULA.rb"
+          git commit -m "feat: update version of \`$FORMULA\` tool"
+          git push --set-upstream origin "$branch"
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "feat: update version of \`$FORMULA\` tool" \
+            --body "Update \`$FORMULA\` to [$TAG]($URL). The source archive checksum was calculated by the workflow."
